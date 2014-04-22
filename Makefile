@@ -1,0 +1,2 @@
+run:
+	clisp frank.lisp

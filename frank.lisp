@@ -4,21 +4,35 @@
 (setf nick "FRANK")
 (setf channel "#frank")
 
-;; Do actual stuff
-(let ((client (socket-connect port server)))
-  (unwind-protect
-    (progn
-      ;; Log
-      (format t "Connecting to ~a:~%" server port)
-      ;; Wait 5 seconds
-      (sleep 5)
-      ;; Send NICK, USER, and JOIN commands
-      (format client "NICK ~a~C~C" nick #\return #\linefeed)
-      (format client "USER ~a 0 * :frank bot~C~C" nick #\return #\linefeed)
-      (format client "JOIN ~a~C~C" channel #\return #\linefeed)
-      (loop
-        (print (read-line client nil nil))
-      )
-    )
-  )
-)
+;; Connect to server and save the socket
+(setf socket (socket-connect port server))
+
+;; Reads forever from socket - to be started on a new thread
+(defun read-loop()
+  (progn
+    (loop(
+    print (read-line socket)))))
+
+;; Send NICK command
+(defun send-nick()
+  (format socket "NICK ~a~%" nick))
+
+;; Send USER command
+(defun send-user()
+  (format socket "USER ~a 0 * :frank bot~%" nick))
+
+;; Send JOIN command
+(defun send-join()
+  (format socket "JOIN ~a~%" channel))
+
+;; Main
+(progn
+       (make-thread (lambda() (progn(thread-yield)(read-loop))))
+       (print "i'm here")
+       (loop(progn
+             (setq input (read-line))
+             (print input)
+             (cond
+                   ((string-equal input "nick") (send-nick))
+                   ((string-equal input "user") (send-user))
+                   ((string-equal input "join") (send-join))))))
