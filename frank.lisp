@@ -25,6 +25,10 @@
 (defun send-join()
   (format socket "JOIN ~a~%" channel))
 
+;; Send normal message to channel
+(defun send-msg(text)
+  (format socket "PRIVMSG ~a :~a~%" channel text))
+
 ;; Main
 (progn
        (make-thread (lambda() (progn(thread-yield)(read-loop))))
@@ -35,4 +39,5 @@
              (cond
                    ((string-equal input "nick") (send-nick))
                    ((string-equal input "user") (send-user))
-                   ((string-equal input "join") (send-join))))))
+                   ((string-equal input "join") (send-join))
+                   (t (send-msg input))))))
