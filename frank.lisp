@@ -53,10 +53,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Define constants
-(setf server "irc.sorcery.net")
-(setf port 6667)
-(setf nick "FRANK")
-(setf channel "#frank")
+(setf server  "irc.sorcery.net")
+(setf port    6667)
+(setf nick    "FRANK")
+(setf channel "#er")
 ;(setf authorized-users '("." "trapped"))
 
 ;; Define session variables
@@ -89,33 +89,37 @@
         (format socket "QUIT :~a~%" message))
       (send-msg (format nil "~a: user not authorized" sender))))
 
-(defun do-randn(arg)
-  (setq ))
+;; Process RANDN command
+(defun do-randn(sender arg)
+  (setq num (nth 0(split arg #\Space)))
+  (send-msg (format nil "~a: ~a" sender (random (parse-integer num)))))
 
 ;; Process chat commands
 (defun process-cmd(line)
   (setq cmd (nth 1 (split (get-text line) #\Space)))
   (setq prefix (format nil "~a: " nick))
   (setq raw-arg (progn
-    (if (<= (length (get-text line)) (+ (length cmd) (length prefix)))
+    (if (<= (length (get-text line)) (+ (length cmd) (length prefix) 1))
       ""
-      (subseq (get-text line) (+ (length cmd) (length prefix))))))
+      (subseq (get-text line) (+ (length cmd) (length prefix) 1)))))
   (cond
     ((string= cmd "quit")  (do-quit (get-sender line) raw-arg))
-    ((string= cmd "randn") (do-randn raw-arg))
+    ((string= cmd "randn") (do-randn (get-sender line) raw-arg))
     (t                    (send-msg (format nil "~a: unknown command '~a' :(" (get-sender line) cmd)))))
 
 ;; Process content of PRIVMSGs
 (defun process-privmsg(line)
-  (setq text (get-text line))
-  (setq prefix (format nil "~a: " nick))
+  (setq text (string-downcase (get-text line)))
+  (setq prefix (string-downcase (format nil "~a: " nick)))
   (cond
     ((not (= (string>= text prefix) 0)) (if(string= text prefix :end1 (length prefix)) (process-cmd line)))
-    (t                               (format t "~a <- ~a: ~a~%" (get-privmsg-recp line) (get-sender line) (get-text line)))))
+    (t (format t "~a <- ~a: ~a~%" (get-privmsg-recp line) (get-sender line) (get-text line)))))
 
+;; Process JOIN message received from server
 (defun process-join(line)
   (format t ">> Joined channel ~a~%" (get-text line)))
 
+;; Process ERROR message received from server
 (defun process-error(line)
   (if quitting
       (progn
