@@ -1,146 +1,88 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Message processing utilities ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; FRANK - *THE* IRC bot
+;;; ---------------------
+;;; 
+;;; Inspired by the #frank
+;;; channel on SorceryNet,
+;;; THE ONE IRC bot: FRANK.
+;;;
 
-;; Split line by char
-(defun split(line char)
-  (loop for i = 0 then (1+ j)
-        as j = (position char line :start i)
-        collect (subseq line i j)
-        while j))
+;; Other useful packages
+(require "./txtproc.lisp")
 
-;; Get message type
-(defun get-type(line)
-  (progn
-    (setq done-split (split (nth 1 (split line #\:)) #\Space))
-    (nth 1 done-split)))
+;; Message processors
+(loop
+  for file in (directory "./processors/*")
+  do(require (namestring file)))
 
-;; Get message sender
-(defun get-sender(line)
-  (progn
-    (setq done-split (split (nth 1 (split line #\:)) #\Space))
-    (setq full-user (nth 0 done-split))
-    (nth 0 (split full-user #\!))))
+;; Scripts (chat commands)
+(loop
+  for file in (directory "./scripts/*")
+  do(require (namestring file)))
 
-;; Get PRIVMSG recipient
-(defun get-privmsg-recp(line)
-  (progn
-    (setq done-split (split (nth 1 (split line #\:)) #\Space))
-    (nth 2 done-split)))
+;; Constants
+(setf server           "irc.sorcery.net")
+(setf port             6667)
+(setf nick             "FRANK")
+(setf full-name        "frank bot")
+(setf channels         '("#frank" "#er"))
+(setf authorized-users '("." "trapped")) ; "." reserved for internal as Sorcery wouldn't allow users to use it anyway
 
-;; Get position nth occurrence of char in line
-(defun get-occurrence(line char n)
-  (progn
-    (setq occ -1)
-    (setq pos 0)
-    (map 'nil #'
-         (lambda(c)
-           (progn
-              (if (string= c char)
-                  (setq occ (+ occ 1)))
-              (if (= (- n 1) occ)
-                  (return-from get-occurrence pos)
-                  (setq pos (+ pos 1)))))
-         line)))
-
-;; Get message text
-(defun get-text(line)
-  (progn
-    (subseq line (+ 1(get-occurrence line #\: 2)))))
-
-;;;;;;;;;;;;;;;;;;;;;;
-;;; Actual program ;;;
-;;;;;;;;;;;;;;;;;;;;;;
-
-;; Define constants
-(setf server  "irc.sorcery.net")
-(setf port    6667)
-(setf nick    "FRANK")
-(setf channel "#er")
-;(setf authorized-users '("." "trapped"))
-
-;; Define session variables
+;; Session variables
 (setf quitting nil)
+(setf joined   '()) ; To be filled with a list of integers -> indexes of keys of channels
 
-;; Connect to server and save the socket
-(setf socket (socket-connect port server))
+;; Server connection socket
+(setf socket nil)
 
-;; Send NICK command
 (defun send-nick()
+  "Sends the NICK command."
   (format socket "NICK ~a~%" nick))
 
-;; Send USER command
 (defun send-user()
-  (format socket "USER ~a 0 * :frank bot~%" nick))
+  "Sends the USER command."
+  (format socket "USER ~a 0 * :~a~%" nick full-name))
 
-;; Send JOIN command
 (defun send-join()
-  (format socket "JOIN ~a~%" channel))
+  "Sends as many JOIN commands as the number of channels specified."
+  (loop
+    for chan in channels
+    do(format socket "JOIN ~a~%" chan)))
 
-;; Send normal message to channel
-(defun send-msg(text)
-  (format socket "PRIVMSG ~a :~a~%" channel text))
+(defun send-msg(channel text)
+  "Sends a normal chat message to the selected channel."
+  (setq fixed-text (remove #\Newline text))
+  (format socket "PRIVMSG ~a :~a~%" channel fixed-text))
 
-;; Disconnect from server
-(defun do-quit(sender message)
-  (if t ;(member sender authorized-users)
-      (progn
-        (setf quitting t)
-        (format socket "QUIT :~a~%" message))
-      (send-msg (format nil "~a: user not authorized" sender))))
-
-;; Process RANDN command
-(defun do-randn(sender arg)
-  (setq num (nth 0(split arg #\Space)))
-  (send-msg (format nil "~a: ~a" sender (random (parse-integer num)))))
-
-;; Process chat commands
-(defun process-cmd(line)
-  (setq cmd (nth 1 (split (get-text line) #\Space)))
+(defun read-cmd(line)
+  "Finds and executes received commands."
+  (setq cmd (nth 1 (txt:split (txt:get-text line) #\Space)))
+  (setq sym (find-symbol (format nil "DO-~a" (string-upcase cmd))))
   (setq prefix (format nil "~a: " nick))
   (setq raw-arg (progn
-    (if (<= (length (get-text line)) (+ (length cmd) (length prefix) 1))
+    (if (<= (length (txt:get-text line)) (+ (length cmd) (length prefix) 1))
       ""
-      (subseq (get-text line) (+ (length cmd) (length prefix) 1)))))
-  (cond
-    ((string= cmd "quit")  (do-quit (get-sender line) raw-arg))
-    ((string= cmd "randn") (do-randn (get-sender line) raw-arg))
-    (t                    (send-msg (format nil "~a: unknown command '~a' :(" (get-sender line) cmd)))))
+      (subseq (txt:get-text line) (+ (length cmd) (length prefix) 1)))))
+  (handler-case
+    (if
+      sym
+      (funcall (symbol-function sym) (txt:get-privmsg-recp line) (txt:get-sender line) raw-arg)
+      (send-msg (txt:get-privmsg-recp line) (format nil "~a: unknown command '~a' :(" (txt:get-sender line) cmd)))
+    (condition (exc) (send-msg (txt:get-privmsg-recp line) (format nil "~a: error processing the command ('~a') :(" (txt:get-sender line) exc)))))
 
-;; Process content of PRIVMSGs
-(defun process-privmsg(line)
-  (setq text (string-downcase (get-text line)))
-  (setq prefix (string-downcase (format nil "~a: " nick)))
-  (cond
-    ((not (= (string>= text prefix) 0)) (if(string= text prefix :end1 (length prefix)) (process-cmd line)))
-    (t (format t "~a <- ~a: ~a~%" (get-privmsg-recp line) (get-sender line) (get-text line)))))
+(defun read-msg(line)
+  "Parses and processes received server messages."
+  (setq type (txt:get-type line))
+  (setq sym (find-symbol (format nil "PROCESS-~a" (string-upcase type))))
+  (if
+    sym
+    (funcall (symbol-function sym) line)))
 
-;; Process JOIN message received from server
-(defun process-join(line)
-  (format t ">> Joined channel ~a~%" (get-text line)))
-
-;; Process ERROR message received from server
-(defun process-error(line)
-  (if quitting
-      (progn
-        (socket-close socket)
-        (quit))
-      (format t ">> Error: ~a" (get-text line))))
-
-;; Process received message
-(defun process-msg(line)
-  (setq type (get-type line))
-  (cond
-    ((string= type "NOTICE")            (format t ">> Notice: ~a~%" (get-text line)))
-    ((string= type "PRIVMSG")           (process-privmsg line))
-    ((string= (subseq line 0 4) "PING") (format socket "PONG ~a~%"  (subseq line 5)))
-    ((string= type "JOIN")              (process-join    line))
-    ((string= type "ERROR")             (process-error   line))))
-
-;; Read forever from socket - start in a new thread
 (defun read-loop()
-  (loop(
-    process-msg (read-line socket))))
+  "Loops forever and reads from the connection, then passes the lines to read-msg()."
+  (loop(progn
+    (setq line (read-line socket))
+    (read-msg line))))
 
 ;;;; Trap SIGINT
 ;;(defmacro set-signal-handler (signo &body body)
@@ -157,15 +99,18 @@
 ;;    (do-quit "." "Quitting")))
 
 ;; Main
-(progn
-  ; Start secondary reading thread
+(defun main()
+  ; Connect to server
+  (setf socket (socket-connect port server))
+  ; Start secondary reading thread and get back to the main one
   (make-thread (lambda() (progn(thread-yield)(read-loop))))
   ; Loop waiting for commands
-  (loop(progn
+  (loop
+    #|(progn
     ; Store command line input
     (setq input (read-line))
     (cond
-      ((string= input "nick") (send-nick)) ; Send NICK command
-      ((string= input "user") (send-user)) ; Send USER command
-      ((string= input "join") (send-join)) ; Send JOIN command
-      (t (send-msg input)))))) ; Send message to channel
+      (t (send-msg input))))|#)) ; Send message to channel
+
+;; Entry point
+(main)
