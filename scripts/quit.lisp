@@ -7,10 +7,15 @@
 ;;; and exits.
 ;;;
 
-(defun do-quit(chan sender message)
-  "Disconnects from the server"
+(defun do-quit(chan sender arg)
+  "Disconnects from the server. Usage: quit [<quit message>]"
   (if (txt:smember sender authorized-users)
     (progn
       (setf quitting t)
-      (format socket "QUIT : ~a~%" message))
+      (setq line
+        (if
+          (= 0 (length arg))
+          ""
+          (format nil " : ~a" arg)))
+      (format socket "QUIT~a~%" line))
     (send-msg chan (format nil "~a: user not authorized" sender))))

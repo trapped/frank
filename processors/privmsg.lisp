@@ -6,13 +6,16 @@
   "Processes received PRIVMSG messages."
   (setq text (string-downcase (txt:get-text line)))
   (setq prefix (string-downcase (format nil "~a: " nick)))
-  (cond
-    ((/=
+  (ignore-errors
+    (/=
       (progn
         (setq res (string>= text prefix))
-        (if (not res) 0 res))
+        (if
+          (not res)
+          0
+          res))
       0)
-      (if
-        (string= text prefix :end1 (length prefix))
-        (on-command line)))
-    (t (format t "~a <- ~a: ~a~%" (txt:get-privmsg-recp line) (txt:get-sender line) (txt:get-text line)))))
+    (if
+      (string= text prefix :end1 (length prefix))
+      (on-command line)))
+  (format t "~a <- ~a: ~a~%" (txt:get-privmsg-recp line) (txt:get-sender line) (txt:get-text line)))
