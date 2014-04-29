@@ -21,16 +21,20 @@
   do(require (namestring file)))
 
 ;; Constants
-(setf server           "irc.sorcery.net")
-(setf port             6667)
-(setf nick             "FRANK")
-(setf full-name        "frank bot")
-(setf channels         '("#frank" "#er"))
-(setf authorized-users '("." "trapped")) ; "." reserved for internal as Sorcery wouldn't allow users to use it anyway
+(progn
+  (setf server           "irc.sorcery.net")
+  (setf port             6667)
+  (setf nick             "FRANK")
+  (setf password         "REDACTED")
+  (setf full-name        "frank bot")
+  (setf channels         '("#frank" "#er" "#Grid12"))
+  (setf authorized-users '("." "trapped"))) ; "." reserved for internal as Sorcery wouldn't allow users to use it anyway
 
 ;; Session variables
-(setf quitting nil)
-(setf joined   '()) ; To be filled with a list of integers -> indexes of keys of channels
+(progn
+  (setf quitting   nil)
+  (setf joined     '())
+  (setf identified nil)) ; To be filled with a list of integers -> indexes of keys of channels
 
 ;; Server connection socket
 (setf socket nil)
@@ -47,14 +51,16 @@
   "Sends as many JOIN commands as the number of channels specified."
   (loop
     for chan in channels
-    do(format socket "JOIN ~a~%" chan)))
+    do(progn
+      (format socket "JOIN ~a~%" chan)
+      ())))
 
 (defun send-msg(channel text)
   "Sends a normal chat message to the selected channel."
   (setq fixed-text (remove #\Newline text))
   (format socket "PRIVMSG ~a :~a~%" channel fixed-text))
 
-(defun read-cmd(line)
+(defun on-command(line)
   "Finds and executes received commands."
   (setq cmd (nth 1 (txt:split (txt:get-text line) #\Space)))
   (setq sym (find-symbol (format nil "DO-~a" (string-upcase cmd))))
@@ -70,7 +76,7 @@
       (send-msg (txt:get-privmsg-recp line) (format nil "~a: unknown command '~a' :(" (txt:get-sender line) cmd)))
     (condition (exc) (send-msg (txt:get-privmsg-recp line) (format nil "~a: error processing the command ('~a') :(" (txt:get-sender line) exc)))))
 
-(defun read-msg(line)
+(defun on-message(line)
   "Parses and processes received server messages."
   (setq type (txt:get-type line))
   (setq sym (find-symbol (format nil "PROCESS-~a" (string-upcase type))))
@@ -79,10 +85,10 @@
     (funcall (symbol-function sym) line)))
 
 (defun read-loop()
-  "Loops forever and reads from the connection, then passes the lines to read-msg()."
+  "Loops forever and reads from the connection, then passes the lines to on-message()."
   (loop(progn
     (setq line (read-line socket))
-    (read-msg line))))
+    (on-message line))))
 
 ;;;; Trap SIGINT
 ;;(defmacro set-signal-handler (signo &body body)
@@ -106,11 +112,15 @@
   (make-thread (lambda() (progn(thread-yield)(read-loop))))
   ; Loop waiting for commands
   (loop
-    #|(progn
+    (progn
     ; Store command line input
-    (setq input (read-line))
-    (cond
-      (t (send-msg input))))|#)) ; Send message to channel
+    (setq raw (read-line))
+    (setq input (txt:split raw #\Space))
+    (send-msg
+      (nth 0 input)
+      (subseq
+        raw
+        (+ 1 (length (nth 0 input)))))))) ; Send message to channel
 
 ;; Entry point
 (main)

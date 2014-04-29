@@ -9,7 +9,7 @@
 ;;;
 
 (defun do-randn(chan sender arg)
-  "Processes the RANDN chat command."
+  "Prints a random number. Usage: randn <seed>"
   (if(= (length arg) 0)(error "must specify at least one seed number"))
   (setq num (nth 0(txt:split arg #\Space)))
   (send-msg chan (format nil "~a: ~a" sender (random (parse-integer num)))))

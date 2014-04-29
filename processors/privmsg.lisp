@@ -14,5 +14,5 @@
       0)
       (if
         (string= text prefix :end1 (length prefix))
-        (read-cmd line)))
+        (on-command line)))
     (t (format t "~a <- ~a: ~a~%" (txt:get-privmsg-recp line) (txt:get-sender line) (txt:get-text line)))))

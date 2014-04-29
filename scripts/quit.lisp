@@ -12,5 +12,5 @@
   (if (txt:smember sender authorized-users)
     (progn
       (setf quitting t)
-      (format socket "QUIT :~a~%" message))
+      (format socket "QUIT : ~a~%" message))
     (send-msg chan (format nil "~a: user not authorized" sender))))
