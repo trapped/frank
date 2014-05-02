@@ -60,22 +60,6 @@
   (setq fixed-text (remove #\Newline text))
   (format socket "PRIVMSG ~a :~a~%" channel fixed-text))
 
-(defun on-command(line)
-  "Finds and executes received commands."
-  (setq cmd (nth 1 (txt:split (txt:get-text line) #\Space)))
-  (setq sym (find-symbol (format nil "DO-~a" (string-upcase cmd))))
-  (setq prefix (format nil "~a: " nick))
-  (setq raw-arg (progn
-    (if (<= (length (txt:get-text line)) (+ (length cmd) (length prefix) 1))
-      ""
-      (subseq (txt:get-text line) (+ (length cmd) (length prefix) 1)))))
-  (handler-case
-    (if
-      sym
-      (funcall (symbol-function sym) (txt:get-privmsg-recp line) (txt:get-sender line) raw-arg)
-      (send-msg (txt:get-privmsg-recp line) (format nil "~a: unknown command '~a' :(" (txt:get-sender line) cmd)))
-    (condition (exc) (send-msg (txt:get-privmsg-recp line) (format nil "~a: error processing the command ('~a') :(" (txt:get-sender line) exc)))))
-
 (defun on-message(line)
   "Parses and processes received server messages."
   (setq type (txt:get-type line))
