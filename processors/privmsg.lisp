@@ -28,4 +28,4 @@
     (if sym
       (funcall (symbol-function sym) (txt:get-privmsg-recp line) (txt:get-sender line) raw-arg)
       (if (not is-alias) (send-msg (txt:get-privmsg-recp line) (format nil "~a: unknown command '~a' :(" (txt:get-sender line) cmd))))
-    (condition (exc) (send-msg (txt:get-privmsg-recp line) (format nil "~a: error processing the command ('~a') :(" (txt:get-sender line) exc))))
+    (condition (exc) (send-msg (txt:get-privmsg-recp line) (format nil "~a: error processing the command ('~a') :(" (txt:get-sender line) exc)))))
