@@ -27,7 +27,7 @@
   (setf nick             "FRANK")
   (setf password         "REDACTED")
   (setf full-name        "frank bot")
-  (setf channels         '("#frank" "#er" "#Grid12"))
+  (setf channels         '("#er"))
   (setf authorized-users '("." "trapped"))) ; "." reserved for internal as Sorcery wouldn't allow users to use it anyway
 
 ;; Session variables
