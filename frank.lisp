@@ -51,9 +51,7 @@
   "Sends as many JOIN commands as the number of channels specified."
   (loop
     for chan in channels
-    do(progn
-      (format socket "JOIN ~a~%" chan)
-      ())))
+    do(format socket "JOIN ~a~%" chan)))
 
 (defun send-msg(channel text)
   "Sends a normal chat message to the selected channel."
@@ -64,8 +62,7 @@
   "Parses and processes received server messages."
   (setq type (txt:get-type line))
   (setq sym (find-symbol (format nil "PROCESS-~a" (string-upcase type))))
-  (if
-    sym
+  (if sym
     (funcall (symbol-function sym) line)))
 
 (defun read-loop()

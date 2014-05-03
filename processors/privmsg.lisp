@@ -15,8 +15,7 @@
 (defun on-command(line is-alias)
   "Finds and executes received commands."
   (setq prefix
-    (if
-      (is-alias)
+    (if is-alias
       "."
       (format nil "~a: " nick)))
   (setq text (subseq (txt:get-text line) (length prefix)))
@@ -24,8 +23,7 @@
   (setq raw-arg (subseq text (+ (length prefix) (length cmd) 1)))
   (setq sym (find-symbol (format nil "DO-~a" (string-upcase cmd))))
   (handler-case
-    (if
-      sym
+    (if sym
       (funcall (symbol-function sym) (txt:get-privmsg-recp line) (txt:get-sender line) raw-arg)
       (if (not is-alias) (send-msg (txt:get-privmsg-recp line) (format nil "~a: unknown command '~a' :(" (txt:get-sender line) cmd))))
     (condition (exc) (send-msg (txt:get-privmsg-recp line) (format nil "~a: error processing the command ('~a') :(" (txt:get-sender line) exc)))))

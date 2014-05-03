@@ -20,16 +20,16 @@
   "Checks if a string is contained into a list (of strings)."
   (loop
     for item in lst
-    do(
-       if(string= itm item)(return-from smember t)))
+    do(if (string= itm item)
+          (return-from smember t)))
   nil)
 
 (defun split(line char)
   "Splits a line by a character."
   (loop for i = 0 then (1+ j)
-        as j = (position char line :start i)
-        collect (subseq line i j)
-        while j))
+    as j = (position char line :start i)
+    collect (subseq line i j)
+    while j))
 
 (defun get-type(line)
   "Parses and returns the type of the server message."
@@ -53,14 +53,14 @@
   (setq occ -1)
   (setq pos 0)
   (map 'nil #'
-       (lambda(c)
-         (progn
-            (if (string= c char)
-                (setq occ (+ occ 1)))
+    (lambda(c)
+      (progn
+        (if (string= c char)
+            (setq occ (+ occ 1)))
             (if (= (- n 1) occ)
-                (return-from get-occurrence pos)
-                (setq pos (+ pos 1)))))
-       line))
+              (return-from get-occurrence pos)
+              (setq pos (+ pos 1)))))
+    line))
 
 (defun get-text(line)
   "Parses and returns the text of the server message."
