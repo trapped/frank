@@ -20,7 +20,7 @@
         (make-thread (lambda() (progn(thread-yield)(on-command line nil)))))
       ((char= first-char #\.)
         (make-thread (lambda() (progn(thread-yield)(on-command line t)))))))
-  );;(format t "~a <- ~a: ~a~%" (txt:get-privmsg-recp line) (txt:get-sender line) (txt:get-text line)))
+  (format t "~a <- ~a: ~a~%" (txt:get-privmsg-recp line) (txt:get-sender line) (txt:get-text line)))
 
 (defun on-command(line is-alias)
   "Finds and executes received commands."
