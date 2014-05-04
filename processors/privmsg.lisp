@@ -6,20 +6,19 @@
   "Processes received PRIVMSG messages."
   (setq text (string-downcase (txt:get-text line)))
   (setq first-char (nth 0 (coerce text 'list)))
-  (progn
-    (setq prefix (format nil "~a: " (string-downcase nick)))
-    (cond
-      ((progn
-         (setq res (string>= text prefix))
-         (if
-           (not res)
-           (setq res 0))
-         (>=
-           res
-           (length prefix)))
-        (make-thread (lambda() (progn(thread-yield)(on-command line nil)))))
-      ((char= first-char #\.)
-        (make-thread (lambda() (progn(thread-yield)(on-command line t)))))))
+  (setq prefix (format nil "~a: " (string-downcase nick)))
+  (cond
+    ((progn
+       (setq res (string>= text prefix))
+       (if
+         (not res)
+         (setq res 0))
+       (>=
+         res
+         (length prefix)))
+      (on-command line nil))
+    ((char= first-char #\.)
+      (on-command line t)))
   (format t "~a <- ~a: ~a~%" (txt:get-privmsg-recp line) (txt:get-sender line) (txt:get-text line)))
 
 (defun on-command(line is-alias)
