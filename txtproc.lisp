@@ -1,7 +1,7 @@
 ;;;
 ;;; Text processing utilities
 ;;; -------------------------
-;;; 
+;;;
 ;;; To process text and extract
 ;;; useful data expressed with
 ;;; the IRC protocol.
@@ -12,7 +12,7 @@
     #:smember    #:get-privmsg-recp
     #:split      #:get-occurrence
     #:get-type   #:get-text
-    #:get-sender))
+    #:get-sender #:replace-all))
 
 (in-package :txt)
 
@@ -65,5 +65,20 @@
 (defun get-text(line)
   "Parses and returns the text of the server message."
   (subseq line (+ 1(get-occurrence line #\: 2))))
+
+(defun replace-all (string part replacement &key (test #'string=))
+  "Returns a new string in which all the occurences of the part
+  is replaced with replacement."
+  (with-output-to-string (out)
+    (loop with part-length = (length part)
+      for old-pos = 0 then (+ pos part-length)
+        for pos = (search part string
+                      :start2 old-pos
+                      :test test)
+        do (write-string string out
+                      :start old-pos
+                      :end (or pos (length string)))
+        when pos do (write-string replacement out)
+        while pos)))
 
 (provide "txt")
